@@ -708,6 +708,12 @@ static GLFWbool createNativeWindow(_GLFWwindow *window,
       styleMask |= NSWindowStyleMaskResizable;
   }
 
+  //todo:implement
+  if(window->monitor || !window->titleBar) {
+  }
+  else{
+  }
+
   window->ns.object =
           [[GLFWWindow alloc] initWithContentRect:contentRect
                                         styleMask:styleMask
@@ -1137,6 +1143,9 @@ void _glfwSetWindowMonitorCocoa(_GLFWwindow *window, _GLFWmonitor *monitor,
       if (window->decorated) {
         styleMask &= ~NSWindowStyleMaskBorderless;
         styleMask |= (NSWindowStyleMaskTitled | NSWindowStyleMaskClosable);
+      }
+      if (window->titleBar) {
+        //todo:implement
       }
 
       if (window->resizable)
