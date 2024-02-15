@@ -709,9 +709,8 @@ static GLFWbool createNativeWindow(_GLFWwindow *window,
   }
 
   //todo:implement
-  if(window->monitor || !window->titleBar) {
-  }
-  else{
+  if (window->monitor || !window->titleBar) {
+  } else {
   }
 
   window->ns.object =
@@ -1288,17 +1287,19 @@ void _glfwSetWindowResizableCocoa(_GLFWwindow *window, GLFWbool enabled) {
 void _glfwSetWindowDecoratedCocoa(_GLFWwindow *window, GLFWbool enabled) {
   @autoreleasepool {
 
-      NSUInteger styleMask = [window->ns.object styleMask];
-      if (enabled) {
-          styleMask |= (NSWindowStyleMaskTitled | NSWindowStyleMaskClosable);
-          styleMask &= ~NSWindowStyleMaskBorderless;
-      } else {
-          styleMask |= NSWindowStyleMaskBorderless;
-          styleMask &= ~(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable);
-      }
-      [window->ns.object setStyleMask:styleMask];
-      [window->ns.object makeFirstResponder:window->ns.view];
-  }
+    NSUInteger styleMask = [window->ns.object styleMask];
+    if (enabled) {
+      styleMask |= (NSWindowStyleMaskTitled | NSWindowStyleMaskClosable);
+      styleMask &= ~NSWindowStyleMaskBorderless;
+    } else {
+      styleMask |= NSWindowStyleMaskBorderless;
+      styleMask &= ~(NSWindowStyleMaskTitled | NSWindowStyleMaskClosable);
+    }
+
+    [window->ns.object setStyleMask:styleMask];
+    [window->ns.object makeFirstResponder:window->ns.view];
+
+  }// autoreleasepool
 }
 
 void _glfwSetWindowTitlebarCocoa(_GLFWwindow *window, GLFWbool enabled) {
@@ -1309,10 +1310,10 @@ void _glfwSetWindowTitlebarCocoa(_GLFWwindow *window, GLFWbool enabled) {
       m_nsWindow.hasShadow = false;
       m_nsWindow.backgroundColor = [NSColor clearColor];
 
-      m_nsWindow.titleVisibility = NSWindowTitleVisible;
+      m_nsWindow.titleVisibility |= NSWindowTitleVisible;
       m_nsWindow.titlebarAppearsTransparent = true;
-      m_nsWindow.styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable | NSWindowStyleMaskFullSizeContentView;
-      m_nsWindow.titleVisibility = NSWindowTitleHidden;
+      m_nsWindow.styleMask |= NSWindowStyleMaskFullSizeContentView;
+      m_nsWindow.titleVisibility |= NSWindowTitleHidden;
     } else {
       NSWindow *m_nsWindow = window->ns.object;
 
@@ -1320,10 +1321,10 @@ void _glfwSetWindowTitlebarCocoa(_GLFWwindow *window, GLFWbool enabled) {
       m_nsWindow.hasShadow = true;
       m_nsWindow.backgroundColor = [NSColor windowBackgroundColor];
 
-      m_nsWindow.titleVisibility = NSWindowTitleVisible;
+      m_nsWindow.titleVisibility &= ~NSWindowTitleVisible;
       m_nsWindow.titlebarAppearsTransparent = false;
-      m_nsWindow.styleMask = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable | NSWindowStyleMaskFullSizeContentView;
-      m_nsWindow.titleVisibility = NSWindowTitleVisible;
+      m_nsWindow.styleMask &= ~NSWindowStyleMaskFullSizeContentView;
+      m_nsWindow.titleVisibility |= NSWindowTitleVisible;
     }
   }// autoreleasepool
 }
