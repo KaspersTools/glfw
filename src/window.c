@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 - www.glfw.org
+// GLFW 3.5 - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2019 Camilla Löwy <elmindreda@glfw.org>
@@ -212,7 +212,6 @@ GLFWAPI GLFWwindow *glfwCreateWindow(int width, int height,
     window->monitor = (_GLFWmonitor *) monitor;
     window->resizable = wndconfig.resizable;
     window->decorated = wndconfig.decorated;
-    window->titleBar = wndconfig.titlebar;
     window->autoIconify = wndconfig.autoIconify;
     window->floating = wndconfig.floating;
     window->focusOnShow = wndconfig.focusOnShow;
@@ -221,12 +220,18 @@ GLFWAPI GLFWwindow *glfwCreateWindow(int width, int height,
 
     window->doublebuffer = fbconfig.doublebuffer;
 
-    window->minwidth = GLFW_DONT_CARE;
-    window->minheight = GLFW_DONT_CARE;
-    window->maxwidth = GLFW_DONT_CARE;
-    window->maxheight = GLFW_DONT_CARE;
-    window->numer = GLFW_DONT_CARE;
-    window->denom = GLFW_DONT_CARE;
+    window->minwidth    = GLFW_DONT_CARE;
+    window->minheight   = GLFW_DONT_CARE;
+    window->maxwidth    = GLFW_DONT_CARE;
+    window->maxheight   = GLFW_DONT_CARE;
+    window->numer       = GLFW_DONT_CARE;
+    window->denom       = GLFW_DONT_CARE;
+    window->title       = _glfw_strdup(title);
+
+
+    //HBUI
+    window->titleBar = wndconfig.decorated;
+
 
     if (!_glfw.platform.createWindow(window, &wndconfig, &ctxconfig, &fbconfig)) {
         glfwDestroyWindow((GLFWwindow *) window);
@@ -254,9 +259,10 @@ void glfwDefaultWindowHints(void) {
     _glfw.hints.window.focused = GLFW_TRUE;
     _glfw.hints.window.autoIconify = GLFW_TRUE;
     _glfw.hints.window.centerCursor = GLFW_TRUE;
-    _glfw.hints.window.focusOnShow = GLFW_TRUE;
-    _glfw.hints.window.xpos = GLFW_ANY_POSITION;
-    _glfw.hints.window.ypos = GLFW_ANY_POSITION;
+    _glfw.hints.window.focusOnShow  = GLFW_TRUE;
+    _glfw.hints.window.xpos         = GLFW_ANY_POSITION;
+    _glfw.hints.window.ypos         = GLFW_ANY_POSITION;
+    _glfw.hints.window.scaleFramebuffer = GLFW_TRUE;
 
     // The default is 24 bits of color, 24 bits of depth and 8 bits of stencil,
     // double buffered
@@ -272,8 +278,9 @@ void glfwDefaultWindowHints(void) {
     // The default is to select the highest available refresh rate
     _glfw.hints.refreshRate = GLFW_DONT_CARE;
 
-    // The default is to use full Retina resolution framebuffers
-    _glfw.hints.window.ns.retina = GLFW_TRUE;
+
+    //HBUI
+    _glfw.hints.window.titlebar = _glfw.hints.window.titlebar;
 }
 
 GLFWAPI void glfwWindowHint(int hint, int value) {
@@ -355,17 +362,21 @@ GLFWAPI void glfwWindowHint(int hint, int value) {
         case GLFW_POSITION_Y:
             _glfw.hints.window.ypos = value;
             return;
-        case GLFW_COCOA_RETINA_FRAMEBUFFER:
-            _glfw.hints.window.ns.retina = value ? GLFW_TRUE : GLFW_FALSE;
-            return;
         case GLFW_WIN32_KEYBOARD_MENU:
             _glfw.hints.window.win32.keymenu = value ? GLFW_TRUE : GLFW_FALSE;
+            return;
+        case GLFW_WIN32_SHOWDEFAULT:
+            _glfw.hints.window.win32.showDefault = value ? GLFW_TRUE : GLFW_FALSE;
             return;
         case GLFW_COCOA_GRAPHICS_SWITCHING:
             _glfw.hints.context.nsgl.offline = value ? GLFW_TRUE : GLFW_FALSE;
             return;
         case GLFW_SCALE_TO_MONITOR:
             _glfw.hints.window.scaleToMonitor = value ? GLFW_TRUE : GLFW_FALSE;
+            return;
+        case GLFW_SCALE_FRAMEBUFFER:
+        case GLFW_COCOA_RETINA_FRAMEBUFFER:
+            _glfw.hints.window.scaleFramebuffer = value ? GLFW_TRUE : GLFW_FALSE;
             return;
         case GLFW_CENTER_CURSOR:
             _glfw.hints.window.centerCursor = value ? GLFW_TRUE : GLFW_FALSE;
@@ -408,6 +419,11 @@ GLFWAPI void glfwWindowHint(int hint, int value) {
             return;
         case GLFW_REFRESH_RATE:
             _glfw.hints.refreshRate = value;
+            return;
+
+
+        case GLFW_TITLEBAR:
+            _glfw.hints.window.titlebar = value ? GLFW_TRUE : GLFW_FALSE;
             return;
     }
 
@@ -470,6 +486,7 @@ GLFWAPI void glfwDestroyWindow(GLFWwindow *handle) {
         *prev = window->next;
     }
 
+    _glfw_free(window->title);
     _glfw_free(window);
 }
 
@@ -489,13 +506,29 @@ GLFWAPI void glfwSetWindowShouldClose(GLFWwindow *handle, int value) {
     window->shouldClose = value;
 }
 
-GLFWAPI void glfwSetWindowTitle(GLFWwindow *handle, const char *title) {
-    _GLFWwindow *window = (_GLFWwindow *) handle;
+GLFWAPI const char* glfwGetWindowTitle(GLFWwindow* handle)
+{
+    _GLFWwindow* window = (_GLFWwindow*) handle;
+    assert(window != NULL);
+
+    _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
+
+    return window->title;
+}
+
+GLFWAPI void glfwSetWindowTitle(GLFWwindow* handle, const char* title)
+{
+    _GLFWwindow* window = (_GLFWwindow*) handle;
     assert(window != NULL);
     assert(title != NULL);
 
     _GLFW_REQUIRE_INIT();
+
+    char* prev = window->title;
+    window->title = _glfw_strdup(title);
+
     _glfw.platform.setWindowTitle(window, title);
+    _glfw_free(prev);
 }
 
 GLFWAPI void glfwSetWindowIcon(GLFWwindow *handle,
@@ -695,7 +728,7 @@ GLFWAPI float glfwGetWindowOpacity(GLFWwindow *handle) {
     _GLFWwindow *window = (_GLFWwindow *) handle;
     assert(window != NULL);
 
-    _GLFW_REQUIRE_INIT_OR_RETURN(1.f);
+    _GLFW_REQUIRE_INIT_OR_RETURN(0.f);
     return _glfw.platform.getWindowOpacity(window);
 }
 
@@ -816,8 +849,6 @@ GLFWAPI int glfwGetWindowAttrib(GLFWwindow *handle, int attrib) {
             return window->resizable;
         case GLFW_DECORATED:
             return window->decorated;
-        case GLFW_TITLEBAR:
-            return window->titleBar;
         case GLFW_FLOATING:
             return window->floating;
         case GLFW_AUTO_ICONIFY:
@@ -846,6 +877,10 @@ GLFWAPI int glfwGetWindowAttrib(GLFWwindow *handle, int attrib) {
             return window->context.release;
         case GLFW_CONTEXT_NO_ERROR:
             return window->context.noerror;
+
+            //HBUI
+        case GLFW_TITLEBAR:
+            return window->titleBar;
     }
 
     _glfwInputError(GLFW_INVALID_ENUM, "Invalid window attribute 0x%08X", attrib);
@@ -877,12 +912,6 @@ GLFWAPI void glfwSetWindowAttrib(GLFWwindow *handle, int attrib, int value) {
                 _glfw.platform.setWindowDecorated(window, value);
             return;
 
-        case GLFW_TITLEBAR:
-            window->titleBar = value;
-            if (!window->monitor)
-                _glfw.platform.setWindowTitlebar(window, value);
-            return;
-
         case GLFW_FLOATING:
             window->floating = value;
             if (!window->monitor)
@@ -896,6 +925,13 @@ GLFWAPI void glfwSetWindowAttrib(GLFWwindow *handle, int attrib, int value) {
         case GLFW_MOUSE_PASSTHROUGH:
             window->mousePassthrough = value;
             _glfw.platform.setWindowMousePassthrough(window, value);
+            return;
+
+            //HBUI
+        case GLFW_TITLEBAR:
+            window->titleBar = value;
+            if(!window->monitor)
+                _glfw.platform.setWindowTitlebar(window, value);
             return;
     }
 

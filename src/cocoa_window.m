@@ -1,5 +1,5 @@
 //========================================================================
-// GLFW 3.4 macOS - www.glfw.org
+// GLFW 3.5 macOS - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2009-2019 Camilla Löwy <elmindreda@glfw.org>
 //
@@ -22,8 +22,6 @@
 // 3. This notice may not be removed or altered from any source
 //    distribution.
 //
-//========================================================================
-// It is fine to use C99 in this file because it will not be built with VS
 //========================================================================
 
 #include "internal.h"
@@ -434,10 +432,10 @@ static const NSRange kEmptyRange = {NSNotFound, 0};
   const float xscale = fbRect.size.width / contentRect.size.width;
   const float yscale = fbRect.size.height / contentRect.size.height;
 
-  if (xscale != window->ns.xscale || yscale != window->ns.yscale) {
-    if (window->ns.retina && window->ns.layer)
-      [window->ns.layer
-              setContentsScale:[window->ns.object backingScaleFactor]];
+    if (xscale != window->ns.xscale || yscale != window->ns.yscale)
+    {
+        if (window->ns.scaleFramebuffer && window->ns.layer)
+            [window->ns.layer setContentsScale:[window->ns.object backingScaleFactor]];
 
     window->ns.xscale = xscale;
     window->ns.yscale = yscale;
@@ -750,9 +748,8 @@ static GLFWbool createNativeWindow(_GLFWwindow *window,
     if (wndconfig->floating)
       [window->ns.object setLevel:NSFloatingWindowLevel];
 
-    if (wndconfig->maximized)
-      [window->ns.object zoom:nil];
-  }
+    window->ns.view = [[GLFWContentView alloc] initWithGlfwWindow:window];
+    window->ns.scaleFramebuffer = wndconfig->scaleFramebuffer;
 
   if (strlen(wndconfig->ns.frameName))
     [window->ns.object setFrameAutosaveName:@(wndconfig->ns.frameName)];
@@ -1496,13 +1493,15 @@ void _glfwSetCursorModeCocoa(_GLFWwindow *window, int mode) {
 const char *_glfwGetScancodeNameCocoa(int scancode) {
   @autoreleasepool {
 
-    if (scancode < 0 || scancode > 0xff ||
-        _glfw.ns.keycodes[scancode] == GLFW_KEY_UNKNOWN) {
-      _glfwInputError(GLFW_INVALID_VALUE, "Invalid scancode %i", scancode);
-      return NULL;
+    if (scancode < 0 || scancode > 0xff)
+    {
+        _glfwInputError(GLFW_INVALID_VALUE, "Invalid scancode %i", scancode);
+        return NULL;
     }
 
     const int key = _glfw.ns.keycodes[scancode];
+    if (key == GLFW_KEY_UNKNOWN)
+        return NULL;
 
     UInt32 deadKeyState = 0;
     UniChar characters[4];
@@ -1769,9 +1768,8 @@ VkResult _glfwCreateWindowSurfaceCocoa(VkInstance instance, _GLFWwindow *window,
       return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 
-    if (window->ns.retina)
-      [window->ns.layer
-              setContentsScale:[window->ns.object backingScaleFactor]];
+    if (window->ns.scaleFramebuffer)
+        [window->ns.layer setContentsScale:[window->ns.object backingScaleFactor]];
 
     [window->ns.view setLayer:window->ns.layer];
     [window->ns.view setWantsLayer:YES];
@@ -1840,13 +1838,29 @@ GLFWAPI id glfwGetCocoaWindow(GLFWwindow *handle) {
   _GLFWwindow *window = (_GLFWwindow *) handle;
   _GLFW_REQUIRE_INIT_OR_RETURN(nil);
 
-  if (_glfw.platform.platformID != GLFW_PLATFORM_COCOA) {
-    _glfwInputError(GLFW_PLATFORM_UNAVAILABLE,
-                    "Cocoa: Platform not initialized");
-    return NULL;
-  }
+    if (_glfw.platform.platformID != GLFW_PLATFORM_COCOA)
+    {
+        _glfwInputError(GLFW_PLATFORM_UNAVAILABLE,
+                        "Cocoa: Platform not initialized");
+        return nil;
+    }
 
   return window->ns.object;
 }
 
-#endif// _GLFW_COCOA
+GLFWAPI id glfwGetCocoaView(GLFWwindow* handle)
+{
+    _GLFWwindow* window = (_GLFWwindow*) handle;
+    _GLFW_REQUIRE_INIT_OR_RETURN(nil);
+
+    if (_glfw.platform.platformID != GLFW_PLATFORM_COCOA)
+    {
+        _glfwInputError(GLFW_PLATFORM_UNAVAILABLE,
+                        "Cocoa: Platform not initialized");
+        return nil;
+    }
+
+    return window->ns.view;
+}
+
+#endif // _GLFW_COCOA
